@@ -1,54 +1,30 @@
-pipeline {
-    agent any
-
-    stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('List Files') {
-            steps {
-                sh 'pwd'
-                sh 'ls -la'
-            }
-        }
-
-        stage('Node Version') {
-            steps {
-                sh 'node -v || true'
-                sh 'npm -v || true'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'npm run build || true'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'npm test || true'
-            }
-        }
+stage('Build Docker Image') {
+    steps {
+        sh '''
+        docker build -t nodejs-app:latest .
+        '''
     }
+}
 
-    post {
-        success {
-            echo 'Build Successful'
-        }
+stage('Deploy Application') {
+    steps {
+        sh '''
+        docker stop nodejs-app 2>/dev/null || true
+        docker rm nodejs-app 2>/dev/null || true
 
-        failure {
-            echo 'Build Failed'
-        }
+        docker run -d \
+          --name nodejs-app \
+          --restart unless-stopped \
+          -p 3000:3000 \
+          nodejs-app:latest
+        '''
+    }
+}
+
+stage('Verify Deployment') {
+    steps {
+        sh '''
+        docker ps
+        '''
     }
 }
